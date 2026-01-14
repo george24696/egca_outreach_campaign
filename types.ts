@@ -15,8 +15,15 @@ export interface Executive {
 
 export interface ProductionYear {
   year: string;
-  ebitda: number; // Renamed from ebdat
-  production: number;
+  [key: string]: string | number; // Allow dynamic keys for various charts
+}
+
+export interface ChartConfig {
+  id: string;
+  dataKey: string; // Corresponds to key in ProductionYear
+  title: string;
+  labelX: string;
+  labelY: string;
 }
 
 export interface GeoLocation {
@@ -44,8 +51,11 @@ export interface Company {
   productionData: ProductionYear[];
   highlightedCountries: string[]; // ISO codes or names for map highlighting
   
-  // Chart configurations
-  axisLabelEbitda?: string; // Renamed from axisLabelEbdat
+  // Dynamic Chart configurations
+  charts: ChartConfig[];
+
+  // Legacy fields kept for migration safety
+  axisLabelEbitda?: string; 
   axisLabelProduction?: string;
 
   // Source Links

@@ -53,7 +53,24 @@ export const createEmptyCompany = (name: string): Company => ({
     { year: "2023", ebitda: 11, production: 5.5 },
     { year: "2024", ebitda: 14, production: 7 },
   ],
+  charts: [
+    {
+      id: generateId(),
+      dataKey: 'ebitda',
+      title: 'EBITDA',
+      labelX: 'Years',
+      labelY: 'EBITDA (R Billion)'
+    },
+    {
+      id: generateId(),
+      dataKey: 'production',
+      title: 'Production',
+      labelX: 'Years',
+      labelY: 'Production (Kt)'
+    }
+  ],
   highlightedCountries: [],
+  // Legacy support defaults
   axisLabelEbitda: "EBITDA (R Billion)",
   axisLabelProduction: "Production (Kt)",
   

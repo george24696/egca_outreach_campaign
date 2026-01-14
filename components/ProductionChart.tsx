@@ -4,22 +4,14 @@ import { ProductionYear } from '../types';
 
 interface ProductionChartProps {
   data: ProductionYear[];
-  type: 'ebitda' | 'production';
-  axisLabel?: string;
+  dataKey: string;
+  title: string;
+  labelX?: string;
+  labelY: string;
 }
 
-const ProductionChart: React.FC<ProductionChartProps> = ({ data, type, axisLabel }) => {
-  const dataKey = type;
+const ProductionChart: React.FC<ProductionChartProps> = ({ data, dataKey, title, labelX = 'Years', labelY }) => {
   const color = "#37A3C3";
-  const defaultLabel = type === 'ebitda' ? 'EBITDA (R Billion)' : 'Production (Kt)';
-  
-  // Use axisLabel if provided, otherwise default.
-  // Also enforce migration of old default label strings if they are passed in.
-  let displayLabel = axisLabel || defaultLabel;
-  
-  if (displayLabel === 'EBDAT ($M)' || displayLabel === 'EBITDA ($M)') {
-    displayLabel = 'EBITDA (R Billion)';
-  }
 
   const renderCustomBarLabel = (props: any) => {
     const { x, y, width, value, index } = props;
@@ -28,8 +20,8 @@ const ProductionChart: React.FC<ProductionChartProps> = ({ data, type, axisLabel
     
     // Calculate percentage change if not the first item
     if (index > 0) {
-        // Safe access for ebitda or production based on dataKey
-        const prevVal = data[index - 1][dataKey as keyof ProductionYear];
+        // Safe access based on dynamic dataKey
+        const prevVal = data[index - 1][dataKey];
         
         // Check if prevVal exists and is not zero to avoid division by zero
         if (typeof prevVal === 'number' && prevVal !== 0) {
@@ -58,21 +50,15 @@ const ProductionChart: React.FC<ProductionChartProps> = ({ data, type, axisLabel
   return (
     <div className="h-96 w-full bg-white p-4 rounded-lg flex flex-col">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-slate-700 uppercase shrink-0">{displayLabel}</h3>
+        <h3 className="text-lg font-bold text-slate-700 uppercase shrink-0">{title}</h3>
       </div>
       
-      {/* 
-        Container for Chart:
-        - min-h-0 is crucial for flex child to not overflow parent height.
-        - relative ensures absolute positioning context if needed.
-        - h-full takes remaining space from flex parent.
-      */}
       <div className="flex-1 w-full min-h-0 relative">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
             margin={{
-              top: 30, // Increased top margin to fit text labels
+              top: 30,
               right: 30,
               left: 20,
               bottom: 20,
@@ -83,13 +69,13 @@ const ProductionChart: React.FC<ProductionChartProps> = ({ data, type, axisLabel
                 dataKey="year" 
                 axisLine={false} 
                 tickLine={false} 
-                label={{ value: 'Years', position: 'insideBottom', offset: -10, fill: '#94a3b8', fontSize: 12 }}
+                label={{ value: labelX, position: 'insideBottom', offset: -10, fill: '#94a3b8', fontSize: 12 }}
                 tick={{ fill: '#64748b' }}
             />
             <YAxis 
                 axisLine={false} 
                 tickLine={false} 
-                label={{ value: displayLabel, angle: -90, position: 'insideLeft', fill: '#94a3b8', fontSize: 12, style: { textAnchor: 'middle' } }}
+                label={{ value: labelY, angle: -90, position: 'insideLeft', fill: '#94a3b8', fontSize: 12, style: { textAnchor: 'middle' } }}
                 tick={{ fill: '#64748b' }}
             />
             <Tooltip 
@@ -101,7 +87,7 @@ const ProductionChart: React.FC<ProductionChartProps> = ({ data, type, axisLabel
                 fill={color} 
                 radius={[4, 4, 0, 0]} 
                 barSize={50} 
-                name={displayLabel}
+                name={labelY}
                 label={renderCustomBarLabel}
             />
           </BarChart>
