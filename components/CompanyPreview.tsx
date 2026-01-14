@@ -5,13 +5,13 @@ import { getCompanyById } from '../services/db';
 import { THEME_COLOR } from '../constants';
 import WorldMap from './WorldMap';
 import ProductionChart from './ProductionChart';
-import { ArrowLeft, Phone, Mail, MapPin, Loader2 } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, MapPin, Loader2, ExternalLink } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 
 const CompanyPreview: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [company, setCompany] = useState<Company | null>(null);
-  const [activeDataTab, setActiveDataTab] = useState<'ebdat' | 'production'>('ebdat');
+  const [activeDataTab, setActiveDataTab] = useState<'ebitda' | 'production'>('ebitda');
 
   useEffect(() => {
     if (id) {
@@ -22,7 +22,21 @@ const CompanyPreview: React.FC = () => {
   const loadCompany = async (companyId: string) => {
       try {
           const data = await getCompanyById(companyId);
-          if (data) setCompany(data);
+          if (data) {
+              // Backward compatibility check for ebitda
+              const fixedData = { ...data };
+              if (fixedData.productionData) {
+                  fixedData.productionData = fixedData.productionData.map((pd: any) => ({
+                      year: pd.year,
+                      production: pd.production,
+                      ebitda: pd.ebitda !== undefined ? pd.ebitda : (pd.ebdat || 0)
+                  }));
+              }
+              if ((fixedData as any).axisLabelEbdat) {
+                 fixedData.axisLabelEbitda = (fixedData as any).axisLabelEbdat;
+              }
+              setCompany(fixedData);
+          }
       } catch (e) {
           console.error("Failed to load company", e);
       }
@@ -70,10 +84,28 @@ const CompanyPreview: React.FC = () => {
                  <h2 className="text-2xl font-light text-slate-300">Executives details</h2>
             </div>
             
-            <p className="max-w-3xl text-lg font-light leading-relaxed text-slate-300">
+            <p className="max-w-3xl text-lg font-light leading-relaxed text-slate-300 mb-8">
                 We tackle complex challenges by recognizing that intricate systems are made up of simpler components. 
                 Our solutions are straightforward, delivering a high return on investment upon implementation.
             </p>
+
+            {/* Intro Sources */}
+            {company.introSources && company.introSources.length > 0 && (
+                <div className="flex flex-wrap gap-4 items-center">
+                    <span className="text-sm font-bold uppercase tracking-wider text-slate-400">Sources:</span>
+                    {company.introSources.map((source, idx) => (
+                        <a 
+                            key={idx}
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-4 py-2 rounded border border-white/20 bg-white/5 hover:bg-white/10 text-sm font-medium transition-colors"
+                        >
+                            {source.label} <ExternalLink className="w-3 h-3 ml-2 opacity-70" />
+                        </a>
+                    ))}
+                </div>
+            )}
         </div>
       </section>
 
@@ -153,14 +185,14 @@ const CompanyPreview: React.FC = () => {
       {/* Production Data Section (Page 3 Style) */}
       <section className="bg-slate-50 py-16 px-4 sm:px-6 lg:px-8 border-y border-slate-200">
          <div className="max-w-7xl mx-auto">
-            <h2 className="text-3xl font-bold text-[#0f172a] mb-8">Past 4 years EBDAT & Production</h2>
+            <h2 className="text-3xl font-bold text-[#0f172a] mb-8">Past 4 years EBITDA & Production</h2>
             
             <div className="flex gap-4 mb-8">
                 <button 
-                    onClick={() => setActiveDataTab('ebdat')}
-                    className={`px-6 py-2 rounded-full font-medium transition-colors ${activeDataTab === 'ebdat' ? 'bg-[#37A3C3] text-white' : 'bg-white text-slate-600 border border-slate-300'}`}
+                    onClick={() => setActiveDataTab('ebitda')}
+                    className={`px-6 py-2 rounded-full font-medium transition-colors ${activeDataTab === 'ebitda' ? 'bg-[#37A3C3] text-white' : 'bg-white text-slate-600 border border-slate-300'}`}
                 >
-                    EBDAT
+                    EBITDA
                 </button>
                 <button 
                      onClick={() => setActiveDataTab('production')}
@@ -175,20 +207,36 @@ const CompanyPreview: React.FC = () => {
                     <ProductionChart 
                         data={company.productionData} 
                         type={activeDataTab} 
-                        axisLabel={activeDataTab === 'ebdat' ? company.axisLabelEbdat : company.axisLabelProduction}
+                        axisLabel={activeDataTab === 'ebitda' ? company.axisLabelEbitda : company.axisLabelProduction}
                     />
                 </div>
                 <div className="space-y-6">
-                    <h3 className="text-xl font-bold text-[#0f172a]">Performance Analysis</h3>
-                    <p className="text-slate-600">
-                        The visual representation highlights the {activeDataTab === 'ebdat' ? 'financial growth' : 'output capacity'} over the last four fiscal years.
-                        {activeDataTab === 'ebdat' ? ' EBDAT remains a key indicator of operational profitability.' : ' Production metrics demonstrate operational efficiency and scale.'}
-                    </p>
-                    <div className="p-4 bg-white border-l-4 border-[#37A3C3] shadow-sm">
+                    <h3 className="text-xl font-bold text-[#0f172a]">Source</h3>
+                    
+                    {/* Financial/Production Sources */}
+                    {company.financialSources && company.financialSources.length > 0 ? (
+                        <div className="flex flex-col gap-3">
+                            {company.financialSources.map((source, idx) => (
+                                <a 
+                                    key={idx}
+                                    href={source.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center px-4 py-2 rounded border border-slate-300 bg-white text-slate-700 hover:border-[#37A3C3] hover:text-[#37A3C3] text-sm font-medium transition-colors"
+                                >
+                                    {source.label} <ExternalLink className="w-3 h-3 ml-2" />
+                                </a>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-slate-400 text-sm italic">No sources listed.</p>
+                    )}
+
+                    <div className="p-4 bg-white border-l-4 border-[#37A3C3] shadow-sm mt-4">
                         <span className="block text-xs font-bold uppercase text-slate-400">Latest Year ({company.productionData[company.productionData.length - 1]?.year})</span>
                         <span className="text-2xl font-bold text-[#0f172a]">
-                            {activeDataTab === 'ebdat' 
-                                ? `$${company.productionData[company.productionData.length - 1]?.ebdat} M` 
+                            {activeDataTab === 'ebitda' 
+                                ? `$${company.productionData[company.productionData.length - 1]?.ebitda} M` 
                                 : `${company.productionData[company.productionData.length - 1]?.production} Kt`}
                         </span>
                     </div>
@@ -201,7 +249,25 @@ const CompanyPreview: React.FC = () => {
       <section className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
          <div className="mb-8">
             <h2 className="text-3xl font-bold text-[#0f172a]">Locations where they are operating</h2>
-            <p className="text-slate-500 mt-2">Global footprint and strategic operational hubs.</p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mt-2">
+                <p className="text-slate-500">Global footprint and strategic operational hubs.</p>
+                {/* Location Sources */}
+                {company.locationSources && company.locationSources.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                         {company.locationSources.map((source, idx) => (
+                                <a 
+                                    key={idx}
+                                    href={source.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center px-3 py-1 rounded-full border border-slate-300 bg-white text-slate-600 hover:border-[#37A3C3] hover:text-[#37A3C3] text-xs font-medium transition-colors"
+                                >
+                                    Source: {source.label} <ExternalLink className="w-3 h-3 ml-1" />
+                                </a>
+                            ))}
+                    </div>
+                )}
+            </div>
          </div>
          
          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">

@@ -48,12 +48,26 @@ export const createEmptyCompany = (name: string): Company => ({
   },
   locations: [],
   productionData: [
-    { year: "2021", ebdat: 10, production: 5 },
-    { year: "2022", ebdat: 12, production: 6 },
-    { year: "2023", ebdat: 11, production: 5.5 },
-    { year: "2024", ebdat: 14, production: 7 },
+    { year: "2021", ebitda: 10, production: 5 },
+    { year: "2022", ebitda: 12, production: 6 },
+    { year: "2023", ebitda: 11, production: 5.5 },
+    { year: "2024", ebitda: 14, production: 7 },
   ],
   highlightedCountries: [],
-  axisLabelEbdat: "EBDAT ($M)",
-  axisLabelProduction: "Production (Kt)"
+  axisLabelEbitda: "EBITDA ($M)",
+  axisLabelProduction: "Production (Kt)",
+  
+  // Default Sources
+  introSources: [
+    { id: generateId(), label: "Company Website", url: "" },
+    { id: generateId(), label: "Leadership", url: "" },
+    { id: generateId(), label: "Contact Details", url: "" }
+  ],
+  financialSources: [
+    { id: generateId(), label: "2024 Financial Report", url: "" },
+    { id: generateId(), label: "2024 Production Report", url: "" }
+  ],
+  locationSources: [
+    { id: generateId(), label: "Operations Map", url: "" }
+  ]
 });

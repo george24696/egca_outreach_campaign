@@ -4,14 +4,14 @@ import { ProductionYear } from '../types';
 
 interface ProductionChartProps {
   data: ProductionYear[];
-  type: 'ebdat' | 'production';
+  type: 'ebitda' | 'production';
   axisLabel?: string;
 }
 
 const ProductionChart: React.FC<ProductionChartProps> = ({ data, type, axisLabel }) => {
   const dataKey = type;
   const color = "#37A3C3";
-  const defaultLabel = type === 'ebdat' ? 'EBDAT ($M)' : 'Production (Kt)';
+  const defaultLabel = type === 'ebitda' ? 'EBITDA ($M)' : 'Production (Kt)';
   const displayLabel = axisLabel || defaultLabel;
 
   const renderCustomBarLabel = (props: any) => {
@@ -21,7 +21,9 @@ const ProductionChart: React.FC<ProductionChartProps> = ({ data, type, axisLabel
     
     // Calculate percentage change if not the first item
     if (index > 0) {
-        const prevVal = data[index - 1][dataKey];
+        // Safe access for ebitda or production based on dataKey
+        const prevVal = data[index - 1][dataKey as keyof ProductionYear];
+        
         // Check if prevVal exists and is not zero to avoid division by zero
         if (typeof prevVal === 'number' && prevVal !== 0) {
             const change = ((Number(value) - prevVal) / prevVal) * 100;

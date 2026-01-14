@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Company, Executive, ProductionYear, GeoLocation } from '../types';
+import { Company, Executive, ProductionYear, Source } from '../types';
 import { getCompanyById, saveCompany, uploadImageFile } from '../services/db';
 import { THEME_COLOR } from '../constants';
 import WorldMap from './WorldMap';
 import ProductionChart from './ProductionChart';
-import { Save, Eye, ArrowLeft, Trash2, Plus, Upload, Building2, CheckCircle, Loader2 } from 'lucide-react';
+import { Save, Eye, ArrowLeft, Trash2, Plus, Upload, Building2, CheckCircle, Loader2, Link as LinkIcon } from 'lucide-react';
 
 const CompanyEditor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,7 +20,7 @@ const CompanyEditor: React.FC = () => {
   const isFirstLoad = useRef(true);
 
   // For data tab preview
-  const [activePreviewTab, setActivePreviewTab] = useState<'ebdat' | 'production'>('ebdat');
+  const [activePreviewTab, setActivePreviewTab] = useState<'ebitda' | 'production'>('ebitda');
 
   useEffect(() => {
     if (id) {
@@ -32,7 +32,26 @@ const CompanyEditor: React.FC = () => {
       try {
           const data = await getCompanyById(companyId);
           if (data) {
-              setCompany(data);
+              // Backward compatibility for old records without sources arrays or using 'ebdat'
+              const fixedData = { ...data };
+              if (!fixedData.introSources) fixedData.introSources = [];
+              if (!fixedData.financialSources) fixedData.financialSources = [];
+              if (!fixedData.locationSources) fixedData.locationSources = [];
+              
+              // Migrate ebdat to ebitda in local state if needed
+              if (fixedData.productionData) {
+                  fixedData.productionData = fixedData.productionData.map((pd: any) => ({
+                      year: pd.year,
+                      production: pd.production,
+                      ebitda: pd.ebitda !== undefined ? pd.ebitda : (pd.ebdat || 0)
+                  }));
+              }
+              
+              if ((fixedData as any).axisLabelEbdat) {
+                 fixedData.axisLabelEbitda = (fixedData as any).axisLabelEbdat;
+              }
+
+              setCompany(fixedData);
           }
       } catch (e) {
           console.error("Failed to load company", e);
@@ -162,6 +181,79 @@ const CompanyEditor: React.FC = () => {
     );
     setCompany({ ...company, locations: updatedLocations });
   };
+
+  // --- Generic Source Management ---
+  const updateSource = (section: 'intro' | 'financial' | 'location', id: string, field: 'label' | 'url', value: string) => {
+    if (!company) return;
+    const key = `${section}Sources` as keyof Company;
+    // @ts-ignore - Typescript struggles with dynamic key access for arrays, but this is safe
+    const updatedSources = (company[key] as Source[]).map(src => 
+        src.id === id ? { ...src, [field]: value } : src
+    );
+    setCompany({ ...company, [key]: updatedSources });
+  };
+
+  const addSource = (section: 'intro' | 'financial' | 'location') => {
+      if (!company) return;
+      const key = `${section}Sources` as keyof Company;
+      const newSource: Source = { id: Math.random().toString(36).substr(2, 9), label: "New Link", url: "" };
+      // @ts-ignore
+      setCompany({ ...company, [key]: [...(company[key] as Source[]), newSource] });
+  };
+
+  const removeSource = (section: 'intro' | 'financial' | 'location', id: string) => {
+      if (!company) return;
+      const key = `${section}Sources` as keyof Company;
+      // @ts-ignore
+      setCompany({ ...company, [key]: (company[key] as Source[]).filter(s => s.id !== id) });
+  };
+
+  const renderSourceEditor = (section: 'intro' | 'financial' | 'location', title: string) => {
+      if (!company) return null;
+      const key = `${section}Sources` as keyof Company;
+      const sources = company[key] as Source[] || [];
+
+      return (
+          <div className="mt-6 border border-slate-200 rounded-md p-4 bg-slate-50">
+              <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                  <LinkIcon className="w-4 h-4" /> {title} Sources
+              </h3>
+              <div className="space-y-3">
+                  {sources.map((src) => (
+                      <div key={src.id} className="flex gap-2 items-center">
+                          <input 
+                              type="text" 
+                              value={src.label}
+                              onChange={(e) => updateSource(section, src.id, 'label', e.target.value)}
+                              placeholder="Button Label"
+                              className="bg-white text-slate-900 border-slate-300 rounded-md shadow-sm text-sm p-2 border w-1/3 focus:ring-[#37A3C3] focus:border-[#37A3C3]"
+                          />
+                          <input 
+                              type="text" 
+                              value={src.url}
+                              onChange={(e) => updateSource(section, src.id, 'url', e.target.value)}
+                              placeholder="https://..."
+                              className="bg-white text-slate-900 border-slate-300 rounded-md shadow-sm text-sm p-2 border flex-1 focus:ring-[#37A3C3] focus:border-[#37A3C3]"
+                          />
+                          <button 
+                              onClick={() => removeSource(section, src.id)}
+                              className="text-slate-400 hover:text-red-500 p-1"
+                          >
+                              <Trash2 className="w-4 h-4" />
+                          </button>
+                      </div>
+                  ))}
+                  <button 
+                      onClick={() => addSource(section)}
+                      className="text-sm text-[#37A3C3] font-medium flex items-center hover:underline mt-2"
+                  >
+                      <Plus className="w-3 h-3 mr-1" /> Add Source Link
+                  </button>
+              </div>
+          </div>
+      );
+  };
+
 
   if (!company) return <div className="p-8 flex items-center text-slate-500"><Loader2 className="animate-spin mr-2"/> Loading data...</div>;
 
@@ -361,70 +453,81 @@ const CompanyEditor: React.FC = () => {
 
         {/* CONTACT TAB */}
         {activeTab === 'contact' && (
-          <div className="max-w-2xl space-y-6">
-            <h2 className="text-lg font-medium">South Africa Office Details</h2>
-            <div>
-                <label className="block text-sm font-medium text-slate-700">Corporate Address</label>
-                <textarea
-                    rows={3}
-                    value={company.contact.address}
-                    onChange={(e) => setCompany({...company, contact: {...company.contact, address: e.target.value}})}
-                    className={inputStyle}
-                />
-            </div>
-            
-            <div>
-                <div className="flex justify-between mb-1">
-                    <label className="block text-sm font-medium text-slate-700">Email Addresses</label>
-                    <button 
-                        type="button"
-                        onClick={() => setCompany({...company, contact: {...company.contact, emails: [...company.contact.emails, '']}})}
-                        className="text-xs text-[#37A3C3] font-medium"
-                    >
-                        + Add Email
-                    </button>
-                </div>
-                {company.contact.emails.map((email, idx) => (
-                    <input
-                        key={idx}
-                        type="email"
-                        value={email}
-                        onChange={(e) => {
-                            const newEmails = [...company.contact.emails];
-                            newEmails[idx] = e.target.value;
-                            setCompany({...company, contact: {...company.contact, emails: newEmails}});
-                        }}
-                        className={`mb-2 ${inputStyle}`}
-                        placeholder="info@egca.io"
-                    />
-                ))}
+          <div className="space-y-8">
+            {/* General Company Info Sources (Intro) */}
+             <div>
+                <h2 className="text-lg font-medium mb-2">Company Overview & Sources</h2>
+                <p className="text-sm text-slate-500">Links appearing in the Intro/Hero section (e.g. Website, Leadership page).</p>
+                {renderSourceEditor('intro', 'Intro / Overview')}
             </div>
 
-            <div>
-                <div className="flex justify-between mb-1">
-                    <label className="block text-sm font-medium text-slate-700">Telephone Numbers</label>
-                    <button 
-                        type="button"
-                        onClick={() => setCompany({...company, contact: {...company.contact, phones: [...company.contact.phones, '']}})}
-                        className="text-xs text-[#37A3C3] font-medium"
-                    >
-                        + Add Phone
-                    </button>
-                </div>
-                {company.contact.phones.map((phone, idx) => (
-                    <input
-                        key={idx}
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => {
-                            const newPhones = [...company.contact.phones];
-                            newPhones[idx] = e.target.value;
-                            setCompany({...company, contact: {...company.contact, phones: newPhones}});
-                        }}
-                        className={`mb-2 ${inputStyle}`}
-                        placeholder="+27..."
+            <hr className="border-slate-200" />
+            
+            <div className="max-w-2xl space-y-6">
+                <h2 className="text-lg font-medium">South Africa Office Details</h2>
+                <div>
+                    <label className="block text-sm font-medium text-slate-700">Corporate Address</label>
+                    <textarea
+                        rows={3}
+                        value={company.contact.address}
+                        onChange={(e) => setCompany({...company, contact: {...company.contact, address: e.target.value}})}
+                        className={inputStyle}
                     />
-                ))}
+                </div>
+                
+                <div>
+                    <div className="flex justify-between mb-1">
+                        <label className="block text-sm font-medium text-slate-700">Email Addresses</label>
+                        <button 
+                            type="button"
+                            onClick={() => setCompany({...company, contact: {...company.contact, emails: [...company.contact.emails, '']}})}
+                            className="text-xs text-[#37A3C3] font-medium"
+                        >
+                            + Add Email
+                        </button>
+                    </div>
+                    {company.contact.emails.map((email, idx) => (
+                        <input
+                            key={idx}
+                            type="email"
+                            value={email}
+                            onChange={(e) => {
+                                const newEmails = [...company.contact.emails];
+                                newEmails[idx] = e.target.value;
+                                setCompany({...company, contact: {...company.contact, emails: newEmails}});
+                            }}
+                            className={`mb-2 ${inputStyle}`}
+                            placeholder="info@egca.io"
+                        />
+                    ))}
+                </div>
+
+                <div>
+                    <div className="flex justify-between mb-1">
+                        <label className="block text-sm font-medium text-slate-700">Telephone Numbers</label>
+                        <button 
+                            type="button"
+                            onClick={() => setCompany({...company, contact: {...company.contact, phones: [...company.contact.phones, '']}})}
+                            className="text-xs text-[#37A3C3] font-medium"
+                        >
+                            + Add Phone
+                        </button>
+                    </div>
+                    {company.contact.phones.map((phone, idx) => (
+                        <input
+                            key={idx}
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => {
+                                const newPhones = [...company.contact.phones];
+                                newPhones[idx] = e.target.value;
+                                setCompany({...company, contact: {...company.contact, phones: newPhones}});
+                            }}
+                            className={`mb-2 ${inputStyle}`}
+                            placeholder="+27..."
+                        />
+                    ))}
+                </div>
             </div>
           </div>
         )}
@@ -449,6 +552,9 @@ const CompanyEditor: React.FC = () => {
                 onPinDragEnd={handlePinDragEnd}
                 editMode={true}
              />
+             
+             {/* Location Sources */}
+             {renderSourceEditor('location', 'Map Data')}
 
              {/* Simple Pin Manager */}
              <div className="mt-8 border-t pt-6">
@@ -516,13 +622,13 @@ const CompanyEditor: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Data Entry Column */}
                 <div>
-                    <h2 className="text-lg font-medium mb-4">Production & EBDAT Data Points</h2>
+                    <h2 className="text-lg font-medium mb-4">Production & EBITDA Data Points</h2>
                     <div className="overflow-x-auto border rounded-lg border-slate-200">
                     <table className="min-w-full divide-y divide-slate-200">
                         <thead className="bg-slate-50">
                         <tr>
                             <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-24">Year</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">EBDAT</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">EBITDA</th>
                             <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Production</th>
                             <th className="px-2 py-3 w-8"></th>
                         </tr>
@@ -544,8 +650,8 @@ const CompanyEditor: React.FC = () => {
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-500">
                                 <input 
                                     type="number"
-                                    value={data.ebdat}
-                                    onChange={(e) => updateProductionData(idx, 'ebdat', e.target.value)}
+                                    value={data.ebitda}
+                                    onChange={(e) => updateProductionData(idx, 'ebitda', e.target.value)}
                                     className="bg-slate-800 text-white border-slate-600 rounded p-1 w-full"
                                 />
                             </td>
@@ -579,7 +685,7 @@ const CompanyEditor: React.FC = () => {
                             onClick={() => {
                                 const lastYear = parseInt(company.productionData[company.productionData.length - 1]?.year || "2020");
                                 const newYear = (lastYear + 1).toString();
-                                setCompany({...company, productionData: [...company.productionData, { year: newYear, ebdat: 0, production: 0 }]});
+                                setCompany({...company, productionData: [...company.productionData, { year: newYear, ebitda: 0, production: 0 }]});
                             }}
                             className="text-sm flex items-center text-[#37A3C3] font-medium hover:underline"
                         >
@@ -591,11 +697,11 @@ const CompanyEditor: React.FC = () => {
                         <h3 className="text-sm font-medium text-slate-900 mb-4">Chart Axis Labels</h3>
                         <div className="grid grid-cols-1 gap-4">
                             <div>
-                                <label className="block text-xs font-medium text-slate-500 mb-1">EBDAT Axis Label</label>
+                                <label className="block text-xs font-medium text-slate-500 mb-1">EBITDA Axis Label</label>
                                 <input 
                                     type="text"
-                                    value={company.axisLabelEbdat || "EBDAT ($M)"}
-                                    onChange={(e) => setCompany({...company, axisLabelEbdat: e.target.value})}
+                                    value={company.axisLabelEbitda || "EBITDA ($M)"}
+                                    onChange={(e) => setCompany({...company, axisLabelEbitda: e.target.value})}
                                     className={inputStyle}
                                 />
                             </div>
@@ -610,6 +716,9 @@ const CompanyEditor: React.FC = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Financial Sources */}
+                    {renderSourceEditor('financial', 'Financial & Production Report')}
                 </div>
 
                 {/* Live Preview Column */}
@@ -618,10 +727,10 @@ const CompanyEditor: React.FC = () => {
                         <h2 className="text-lg font-medium">Chart Preview</h2>
                         <div className="flex gap-2">
                              <button 
-                                onClick={() => setActivePreviewTab('ebdat')}
-                                className={`text-xs px-2 py-1 rounded ${activePreviewTab === 'ebdat' ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-600'}`}
+                                onClick={() => setActivePreviewTab('ebitda')}
+                                className={`text-xs px-2 py-1 rounded ${activePreviewTab === 'ebitda' ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-600'}`}
                             >
-                                EBDAT
+                                EBITDA
                             </button>
                             <button 
                                 onClick={() => setActivePreviewTab('production')}
@@ -635,7 +744,7 @@ const CompanyEditor: React.FC = () => {
                         <ProductionChart 
                             data={company.productionData} 
                             type={activePreviewTab} 
-                            axisLabel={activePreviewTab === 'ebdat' ? company.axisLabelEbdat : company.axisLabelProduction}
+                            axisLabel={activePreviewTab === 'ebitda' ? company.axisLabelEbitda : company.axisLabelProduction}
                         />
                      </div>
                      <p className="text-xs text-slate-400 mt-2 text-center">

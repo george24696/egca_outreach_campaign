@@ -1,3 +1,9 @@
+export interface Source {
+  id: string;
+  label: string;
+  url: string;
+}
+
 export interface Executive {
   id: string;
   roleTitle: string; // Renamable title (e.g., CEO, Chief Transformation Officer)
@@ -9,7 +15,7 @@ export interface Executive {
 
 export interface ProductionYear {
   year: string;
-  ebdat: number;
+  ebitda: number; // Renamed from ebdat
   production: number;
 }
 
@@ -37,6 +43,13 @@ export interface Company {
   locations: GeoLocation[]; // For the map
   productionData: ProductionYear[];
   highlightedCountries: string[]; // ISO codes or names for map highlighting
-  axisLabelEbdat?: string;
+  
+  // Chart configurations
+  axisLabelEbitda?: string; // Renamed from axisLabelEbdat
   axisLabelProduction?: string;
+
+  // Source Links
+  introSources: Source[];
+  financialSources: Source[];
+  locationSources: Source[];
 }
