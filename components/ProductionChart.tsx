@@ -11,8 +11,15 @@ interface ProductionChartProps {
 const ProductionChart: React.FC<ProductionChartProps> = ({ data, type, axisLabel }) => {
   const dataKey = type;
   const color = "#37A3C3";
-  const defaultLabel = type === 'ebitda' ? 'EBITDA ($M)' : 'Production (Kt)';
-  const displayLabel = axisLabel || defaultLabel;
+  const defaultLabel = type === 'ebitda' ? 'EBITDA (R Billion)' : 'Production (Kt)';
+  
+  // Use axisLabel if provided, otherwise default.
+  // Also enforce migration of old default label strings if they are passed in.
+  let displayLabel = axisLabel || defaultLabel;
+  
+  if (displayLabel === 'EBDAT ($M)' || displayLabel === 'EBITDA ($M)') {
+    displayLabel = 'EBITDA (R Billion)';
+  }
 
   const renderCustomBarLabel = (props: any) => {
     const { x, y, width, value, index } = props;
@@ -51,7 +58,7 @@ const ProductionChart: React.FC<ProductionChartProps> = ({ data, type, axisLabel
   return (
     <div className="h-96 w-full bg-white p-4 rounded-lg flex flex-col">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-slate-700 uppercase shrink-0">{displayLabel} - History</h3>
+        <h3 className="text-lg font-bold text-slate-700 uppercase shrink-0">{displayLabel}</h3>
       </div>
       
       {/* 

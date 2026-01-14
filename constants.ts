@@ -54,7 +54,7 @@ export const createEmptyCompany = (name: string): Company => ({
     { year: "2024", ebitda: 14, production: 7 },
   ],
   highlightedCountries: [],
-  axisLabelEbitda: "EBITDA ($M)",
+  axisLabelEbitda: "EBITDA (R Billion)",
   axisLabelProduction: "Production (Kt)",
   
   // Default Sources

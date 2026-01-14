@@ -35,6 +35,12 @@ const CompanyPreview: React.FC = () => {
               if ((fixedData as any).axisLabelEbdat) {
                  fixedData.axisLabelEbitda = (fixedData as any).axisLabelEbdat;
               }
+
+              // Auto-migrate old labels to new unit (same as in Editor)
+              if (fixedData.axisLabelEbitda === "EBITDA ($M)" || fixedData.axisLabelEbitda === "EBDAT ($M)") {
+                  fixedData.axisLabelEbitda = "EBITDA (R Billion)";
+              }
+
               setCompany(fixedData);
           }
       } catch (e) {
@@ -236,7 +242,7 @@ const CompanyPreview: React.FC = () => {
                         <span className="block text-xs font-bold uppercase text-slate-400">Latest Year ({company.productionData[company.productionData.length - 1]?.year})</span>
                         <span className="text-2xl font-bold text-[#0f172a]">
                             {activeDataTab === 'ebitda' 
-                                ? `$${company.productionData[company.productionData.length - 1]?.ebitda} M` 
+                                ? `R${company.productionData[company.productionData.length - 1]?.ebitda} Billion` 
                                 : `${company.productionData[company.productionData.length - 1]?.production} Kt`}
                         </span>
                     </div>

@@ -51,6 +51,11 @@ const CompanyEditor: React.FC = () => {
                  fixedData.axisLabelEbitda = (fixedData as any).axisLabelEbdat;
               }
 
+              // Auto-migrate old labels to new unit
+              if (fixedData.axisLabelEbitda === "EBITDA ($M)" || fixedData.axisLabelEbitda === "EBDAT ($M)") {
+                  fixedData.axisLabelEbitda = "EBITDA (R Billion)";
+              }
+
               setCompany(fixedData);
           }
       } catch (e) {
@@ -700,7 +705,7 @@ const CompanyEditor: React.FC = () => {
                                 <label className="block text-xs font-medium text-slate-500 mb-1">EBITDA Axis Label</label>
                                 <input 
                                     type="text"
-                                    value={company.axisLabelEbitda || "EBITDA ($M)"}
+                                    value={company.axisLabelEbitda || "EBITDA (R Billion)"}
                                     onChange={(e) => setCompany({...company, axisLabelEbitda: e.target.value})}
                                     className={inputStyle}
                                 />
