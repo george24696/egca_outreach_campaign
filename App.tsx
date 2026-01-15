@@ -4,6 +4,7 @@ import Navigation from './components/Navigation';
 import Dashboard from './components/Dashboard';
 import CompanyEditor from './components/CompanyEditor';
 import CompanyPreview from './components/CompanyPreview';
+import ComparisonDashboard from './components/ComparisonDashboard';
 import Footer from './components/Footer';
 
 function App() {
@@ -16,6 +17,12 @@ function App() {
               <>
                   <Navigation />
                   <Dashboard />
+              </>
+            } />
+            <Route path="/compare" element={
+              <>
+                  <Navigation />
+                  <ComparisonDashboard />
               </>
             } />
             <Route path="/company/:id" element={

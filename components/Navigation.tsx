@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { THEME_COLOR } from '../constants';
-import { Home, Briefcase } from 'lucide-react';
+import { Home, Briefcase, BarChart2 } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 
 const Navigation: React.FC = () => {
@@ -27,6 +27,17 @@ const Navigation: React.FC = () => {
               >
                 <Home className="w-4 h-4 mr-2" />
                 Dashboard
+              </Link>
+              <Link
+                to="/compare"
+                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  location.pathname === '/compare' 
+                    ? `border-[#37A3C3] text-slate-900` 
+                    : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                }`}
+              >
+                <BarChart2 className="w-4 h-4 mr-2" />
+                Comparison
               </Link>
             </div>
           </div>
